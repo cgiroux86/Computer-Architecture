@@ -83,9 +83,11 @@ class CPU:
         # self.load(filename)
 
         while self.running:
+            # right shift 6 to get total op length
             operands = self.ram_read(self.PC) >> 6
             operand_a = self.ram_read(self.PC + 1)
             operand_b = self.ram_read(self.PC + 2)
+            # right shift 5, mask with 1 to find out whether it's an ALU op
             alu = self.ram_read(self.PC) >> 5 & 1
             IR = self.ram_read(self.PC)
 
@@ -94,9 +96,11 @@ class CPU:
                          operand_a, operand_b)
 
             if IR == self.LDI:
+                # load integer into register
                 self.reg[operand_a] = operand_b
 
             elif IR == self.HLT:
+                # halt machine
                 self.running = False
                 self.PC = 0
 
