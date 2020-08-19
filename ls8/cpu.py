@@ -20,7 +20,10 @@ class CPU:
         self.PRN = 0b01000111
         self.NOP = 0b00000000
         self.ADD = 0b10100000
+        self.SUB = 0b10100001
         self.MUL = 0b10100010
+        self.DIV = 0b10100011
+        self.MOD = 0b10100100
         self.PUSH = 0b01000101
         self.POP = 0b01000110
 
@@ -29,7 +32,6 @@ class CPU:
     def load(self, filename):
         """Load a program into memory."""
         address = 0
-        print(filename)
         try:
             with open(filename) as f:
                 for line in f:
@@ -49,6 +51,12 @@ class CPU:
             self.reg[reg_a] += self.reg[reg_b]
         elif op == self.MUL:
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == self.SUB:
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == self.DIV:
+            self.reg[reg_a] /= self.reg[reg_b]
+        elif op == self.MOD:
+            self.reg[reg_a] %= self.reg[reg_b]
 
         else:
             raise Exception("Unsupported ALU operation")
@@ -60,12 +68,12 @@ class CPU:
         """
 
         print(f"TRACE: %02X | %02X %02X %02X |" % (
-            self.pc,
+            self.PC,
             # self.fl,
             # self.ie,
-            self.ram_read(self.pc),
-            self.ram_read(self.pc + 1),
-            self.ram_read(self.pc + 2)
+            self.ram_read(self.PC),
+            self.ram_read(self.PC + 1),
+            self.ram_read(self.PC + 2)
         ), end='')
 
         for i in range(8):
