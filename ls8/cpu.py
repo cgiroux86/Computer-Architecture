@@ -2,6 +2,7 @@
 
 import sys
 import re
+import os
 
 
 class CPU:
@@ -12,12 +13,16 @@ class CPU:
         self.reg = [0] * 8
         self.running = True
         self.PC = 0
+        self.SP = 0xf3
+        self.reg[-1] = self.SP
         self.HLT = 0b00000001
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.NOP = 0b00000000
         self.ADD = 0b10100000
         self.MUL = 0b10100010
+        self.PUSH = 0b01000101
+        self.POP = 0b01000110
 
         """Construct a new CPU."""
 
@@ -37,7 +42,6 @@ class CPU:
         except:
             print(f'unable to open file: {filename}')
             sys.exit(1)
-        print(self.ram)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
@@ -71,19 +75,38 @@ class CPU:
         # self.load(filename)
 
         while self.running:
-            operands = self.ram[self.PC] >> 6
-            alu = self.ram[self.PC] >> 5 & 1
-            IR = self.ram[self.PC]
+            operands = self.ram_read(self.PC) >> 6
+            operand_a = self.ram_read(self.PC + 1)
+            operand_b = self.ram_read(self.PC + 2)
+            alu = self.ram_read(self.PC) >> 5 & 1
+            IR = self.ram_read(self.PC)
+
             if alu:
                 self.alu(IR,
-                         self.ram[self.PC + 1], self.ram[self.PC + 2])
-            if IR == 130:
-                self.reg[self.ram[self.PC + 1]] = self.ram[self.PC + 2]
-            elif IR == 1:
+                         operand_a, operand_b)
+
+            if IR == self.LDI:
+                self.reg[operand_a] = operand_b
+
+            elif IR == self.HLT:
                 self.running = False
                 self.PC = 0
-            elif IR == 71:
-                print(self.reg[self.ram[self.PC + 1]])
+
+            elif IR == self.PRN:
+                print(self.reg[operand_a])
+
+            elif IR == self.PUSH:
+                # decrement stack counter
+                self.reg[-1] -= 1
+                copy = self.reg[operand_a]
+                self.ram_write(self.SP, copy)
+
+            elif IR == self.POP:
+                data = self.ram_read(self.SP)
+                self.reg[operand_a] = data
+                # increment stack counter
+                self.SP += 1
+
             self.PC += operands + 1
 
     def ram_read(self, address):
