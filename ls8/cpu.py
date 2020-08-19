@@ -54,9 +54,15 @@ class CPU:
         elif op == self.SUB:
             self.reg[reg_a] -= self.reg[reg_b]
         elif op == self.DIV:
-            self.reg[reg_a] /= self.reg[reg_b]
+            if self.reg[reg_b] == 0:
+                raise Exception('zero divisor')
+            else:
+                self.reg[reg_a] /= self.reg[reg_b]
         elif op == self.MOD:
-            self.reg[reg_a] %= self.reg[reg_b]
+            if self.reg[reg_b] == 0:
+                raise Exception('zero divisor')
+            else:
+                self.reg[reg_a] %= self.reg[reg_b]
 
         else:
             raise Exception("Unsupported ALU operation")
