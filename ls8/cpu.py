@@ -1,6 +1,7 @@
 """CPU functionality."""
 
 import sys
+import re
 
 
 class CPU:
@@ -15,37 +16,36 @@ class CPU:
         self.LDI = 0b10000010
         self.PRN = 0b01000111
         self.NOP = 0b00000000
+        self.ADD = 0b10100000
+        self.MUL = 0b10100010
 
         """Construct a new CPU."""
-        pass
 
-    def load(self):
+    def load(self, filename):
         """Load a program into memory."""
-
         address = 0
-
-        # For now, we've just hardcoded a program:
-
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
-
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+        print(filename)
+        try:
+            with open(filename) as f:
+                for line in f:
+                    try:
+                        self.ram[address] = int(
+                            re.findall(r'^[0-9]*', line)[0], 2)
+                        address += 1
+                    except ValueError:
+                        pass
+        except:
+            print(f'unable to open file: {filename}')
+            sys.exit(1)
+        print(self.ram)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
-
-        if op == "ADD":
+        if op == self.ADD:
             self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+        elif op == self.MUL:
+            self.reg[reg_a] *= self.reg[reg_b]
+
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -67,31 +67,27 @@ class CPU:
         for i in range(8):
             print(" %02X" % self.reg[i], end='')
 
-        print()
-
     def run(self):
-        self.load()
-        while self.running:
-            IR = self.ram[self.PC]
-            if IR == 130:
+        # self.load(filename)
 
+        while self.running:
+            operands = self.ram[self.PC] >> 6
+            alu = self.ram[self.PC] >> 5 & 1
+            IR = self.ram[self.PC]
+            if alu:
+                self.alu(IR,
+                         self.ram[self.PC + 1], self.ram[self.PC + 2])
+            if IR == 130:
                 self.reg[self.ram[self.PC + 1]] = self.ram[self.PC + 2]
-                print(self.reg[self.ram[self.PC + 1]])
-                self.PC += 3
-                print(self.ram[self.PC])
             elif IR == 1:
                 self.running = False
                 self.PC = 0
             elif IR == 71:
                 print(self.reg[self.ram[self.PC + 1]])
-                self.PC += 2
+            self.PC += operands + 1
 
     def ram_read(self, address):
         return self.ram[address]
 
     def ram_write(self, address, value):
         self.ram[address] = value
-
-
-cpu = CPU()
-cpu.run()
