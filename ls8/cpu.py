@@ -13,7 +13,7 @@ class CPU:
         self.reg = [0] * 8
         self.running = True
         self.PC = 0
-        self.SP = 0xf3
+        self.SP = 0xf4
         self.reg[-1] = self.SP
         self.HLT = 0b00000001
         self.LDI = 0b10000010
@@ -26,6 +26,10 @@ class CPU:
         self.MOD = 0b10100100
         self.PUSH = 0b01000101
         self.POP = 0b01000110
+        self.CALL = 0b01010000
+        self.RET = 0b00010001
+        self.lookup = {self.LDI: self.loadInt,
+                       self.HLT: self.halt, self.PRN: self.prnt, self.PUSH: self.pushItem, self.POP: self.popItem, self.RET: self.rtrn, self.CALL: self.callFn}
 
         """Construct a new CPU."""
 
@@ -40,7 +44,7 @@ class CPU:
                             re.findall(r'^[0-9]*', line)[0], 2)
                         address += 1
                     except ValueError:
-                        pass
+                        continue
         except:
             print(f'unable to open file: {filename}')
             sys.exit(1)
@@ -54,11 +58,13 @@ class CPU:
         elif op == self.SUB:
             self.reg[reg_a] -= self.reg[reg_b]
         elif op == self.DIV:
+            # check for zero divisor
             if self.reg[reg_b] == 0:
                 raise Exception('zero divisor')
             else:
                 self.reg[reg_a] /= self.reg[reg_b]
         elif op == self.MOD:
+            # check for zero divisor
             if self.reg[reg_b] == 0:
                 raise Exception('zero divisor')
             else:
@@ -85,9 +91,46 @@ class CPU:
         for i in range(8):
             print(" %02X" % self.reg[i], end='')
 
-    def run(self):
-        # self.load(filename)
+    def loadInt(self, operand_a, operand_b):
+        self.reg[operand_a] = operand_b
 
+    def halt(self, operand_a, operand_b):
+        self.running = False
+        self.PC = 0
+
+    def prnt(self, operand_a, operand_b):
+        print(self.reg[operand_a])
+
+    def pushItem(self, operand_a, operand_b):
+        self.SP -= 1
+        copy = self.reg[operand_a]
+        print(copy)
+        self.ram_write(self.SP, copy)
+        print(self.ram)
+
+    def popItem(self, operand_a, operand_b):
+        data = self.ram_read(self.SP)
+        self.reg[operand_a] = data
+        # increment stack counter
+        self.SP += 1
+
+    def callFn(self, operand_a, operand_b):
+        self.SP -= 1
+        self.ram[self.SP] = self.PC + 2
+        self.PC = self.reg[operand_a]
+        # print(self.PC)
+
+    def rtrn(self, operand_a, operand_b):
+        self.PC = self.ram[self.SP]
+        self.SP += 1
+
+    def incrementPC(self, fn, operands):
+        if fn == self.CALL or fn == self.RET:
+            self.PC += 0
+        else:
+            self.PC += operands + 1
+
+    def run(self):
         while self.running:
             # right shift 6 to get total op length
             operands = self.ram_read(self.PC) >> 6
@@ -101,34 +144,18 @@ class CPU:
                 self.alu(IR,
                          operand_a, operand_b)
 
-            if IR == self.LDI:
-                # load integer into register
-                self.reg[operand_a] = operand_b
-
-            elif IR == self.HLT:
-                # halt machine
-                self.running = False
-                self.PC = 0
-
-            elif IR == self.PRN:
-                print(self.reg[operand_a])
-
-            elif IR == self.PUSH:
-                # decrement stack counter
-                self.reg[-1] -= 1
-                copy = self.reg[operand_a]
-                self.ram_write(self.SP, copy)
-
-            elif IR == self.POP:
-                data = self.ram_read(self.SP)
-                self.reg[operand_a] = data
-                # increment stack counter
-                self.SP += 1
-
-            self.PC += operands + 1
+            else:
+                self.lookup[IR](operand_a, operand_b)
+            self.incrementPC(IR, operands)
 
     def ram_read(self, address):
         return self.ram[address]
 
     def ram_write(self, address, value):
         self.ram[address] = value
+
+
+# cpu = CPU()
+# # filename = sys.argv[1]
+# cpu.load('ls8/examples/call.ls8')
+# cpu.run()
