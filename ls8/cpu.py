@@ -28,8 +28,16 @@ class CPU:
         self.POP = 0b01000110
         self.CALL = 0b01010000
         self.RET = 0b00010001
+        self.CMP = 0b10100111
+        self.JEQ = 0b01010101
+        self.JNE = 0b01010110
+        self.JMP = 0b01010100
+        self.FLAG = 0b00000000
         self.lookup = {self.LDI: self.loadInt,
-                       self.HLT: self.halt, self.PRN: self.prnt, self.PUSH: self.pushItem, self.POP: self.popItem, self.RET: self.rtrn, self.CALL: self.callFn}
+                       self.HLT: self.halt, self.PRN: self.prnt,
+                       self.PUSH: self.pushItem, self.POP: self.popItem,
+                       self.RET: self.rtrn, self.CALL: self.callFn,
+                       self.JNE: self.jumpNotEq, self.JMP: self.jump, self.JEQ: self.jumpEq}
 
         """Construct a new CPU."""
 
@@ -69,6 +77,13 @@ class CPU:
                 raise Exception('zero divisor')
             else:
                 self.reg[reg_a] %= self.reg[reg_b]
+        elif op == self.CMP:
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.FLAG = 1
+            if self.reg[reg_a] != self.reg[reg_b]:
+                self.FLAG = 0
+            # if self.reg[reg_a] < self.reg[reg_b]:
+            #     self.FLAG = 4
 
         else:
             raise Exception("Unsupported ALU operation")
@@ -116,7 +131,7 @@ class CPU:
 
     def callFn(self, operand_a, operand_b):
         self.SP -= 1
-        self.ram[self.SP] = self.PC + 2
+        self.ram_write(self.SP, self.PC + 2)
         self.PC = self.reg[operand_a]
         # print(self.PC)
 
@@ -124,8 +139,24 @@ class CPU:
         self.PC = self.ram[self.SP]
         self.SP += 1
 
+    def jump(self, operand_a, operand_b):
+        self.PC = self.reg[operand_a]
+
+    def jumpEq(self, operand_a, operand_b):
+        if self.FLAG == 1:
+            self.PC = self.reg[operand_a]
+        else:
+            self.PC += 2
+
+    def jumpNotEq(self, operand_a, operand_b):
+        if self.FLAG == 0:
+            self.PC = self.reg[operand_a]
+        else:
+            self.PC += 2
+
     def incrementPC(self, fn, operands):
-        if fn == self.CALL or fn == self.RET:
+
+        if fn in [self.CALL, self.RET, self.JNE, self.JMP, self.JEQ]:
             self.PC += 0
         else:
             self.PC += operands + 1
@@ -157,5 +188,5 @@ class CPU:
 
 # cpu = CPU()
 # # filename = sys.argv[1]
-# cpu.load('ls8/examples/call.ls8')
+# cpu.load('ls8/examples/sctest.ls8')
 # cpu.run()
